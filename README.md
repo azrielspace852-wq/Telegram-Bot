@@ -20,24 +20,45 @@ Aplikasi **AI offline** untuk Android dengan fitur:
 - ✅ Backend CPU / GPU / Auto
 - ✅ TTS
 - ✅ Siap di-build lewat GitHub Actions
+- ✅ **Inference engine aktif** memakai prebuilt llama.cpp
 
 ## Status Inference Engine
 
-Saat ini menggunakan **StubInferenceEngine** agar UI & semua fitur non-native bisa langsung dicoba.
+**Sudah aktif** menggunakan prebuilt library:
 
-Untuk production, ganti dengan llama.cpp / kotlinllamacpp / engine native lain. Lihat `InferenceEngine.kt`.
+```kotlin
+implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+```
 
-## Bug yang diperbaiki
+- Tidak perlu NDK / CMake / compile native sendiri.
+- Engine: `LlamaCppInferenceEngine` (membungkus library di atas).
+- Jika library gagal di-load (sangat jarang), otomatis fallback ke `StubInferenceEngine`.
 
-1. **APK release gagal instal** – Release sekarang di-sign dengan debug keystore (sideload-ready). ProGuard rules diperkuat.
-2. **Model hilang saat pindah halaman** – ViewModel di-scope ke Activity + persist path di DataStore.
-3. **Keyboard menutup input** – `windowSoftInputMode=adjustResize` + `Modifier.imePadding()` pada ChatScreen.
+### Model yang didukung
+
+Gunakan model berformat **GGUF**. Contoh yang cocok untuk Android:
+
+| Model              | Ukuran (Q4_K_M) | Catatan          |
+|--------------------|-----------------|------------------|
+| Qwen2.5 0.5B       | ~400 MB         | Sangat cepat     |
+| Gemma 2 2B         | ~1.6 GB         | Seimbang         |
+| Llama 3.2 3B       | ~2.0 GB         | Bagus untuk chat |
+| Phi-3.5 Mini 3.8B  | ~2.2 GB         | Reasoning kuat   |
+
+Letakkan file `.gguf` di storage perangkat, lalu pilih dari halaman Model.
+
+## Bug yang sudah diperbaiki
+
+1. **APK release gagal instal** – Release di-sign dengan debug keystore (sideload-ready).
+2. **Model hilang saat pindah halaman** – ViewModel di-scope ke Activity + persist di DataStore.
+3. **Keyboard menutup input** – `windowSoftInputMode=adjustResize` + `imePadding()`.
+4. **Card clickable di Settings** – urutan parameter sudah diperbaiki.
 
 ## Fitur Swap
 
 - Maksimal 7 GB.
 - File disimpan di folder privat aplikasi.
-- Pada perangkat non-root, true `swapon` tidak tersedia; file berfungsi sebagai disk-backed virtual memory untuk estimasi & future mmap engine.
+- Pada perangkat non-root, true `swapon` tidak tersedia; file berfungsi sebagai disk-backed virtual memory.
 - Tombol buat / hapus di Settings.
 
 ## Build

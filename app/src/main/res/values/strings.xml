@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AXION AI offline</string>
+    <string name="select_model">Pilih Model</string>
+    <string name="chat">Chat</string>
+    <string name="models">Model</string>
+    <string name="settings">Pengaturan</string>
+    <string name="server">Server</string>
+    <string name="attach_file">Lampirkan File</string>
+    <string name="send">Kirim</string>
+    <string name="stop">Stop</string>
+    <string name="tts">Bacakan</string>
+    <string name="cpu">CPU</string>
+    <string name="gpu">GPU</string>
+    <string name="auto">Otomatis</string>
+    <string name="warning_ram">Model membutuhkan lebih banyak RAM daripada yang tersedia. Lanjutkan?</string>
+    <string name="warning_storage">Ruang penyimpanan tidak cukup. Lanjutkan?</string>
+    <string name="force_run">Tetap Jalankan</string>
+    <string name="cancel">Batal</string>
+    <string name="model_loaded">Model berhasil dimuat</string>
+    <string name="model_failed">Gagal memuat model</string>
+    <string name="server_running">Server berjalan di %1$s:%2$d</string>
+    <string name="no_model">Belum ada model dipilih</string>
+    <string name="theme">Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_dark">Gelap</string>
+    <string name="privacy_policy">Kebijakan Privasi</string>
+    <string name="thinking_mode">Mode Thinking</string>
+    <string name="thinking_on">Aktif</string>
+    <string name="thinking_off">Nonaktif</string>
+    <string name="thinking_unsupported">Model tidak mendukung reasoning</string>
+    <string name="swap">Swap (Virtual Memory)</string>
+    <string name="create_swap">Buat Swap</string>
+    <string name="delete_swap">Hapus Swap</string>
+    <string name="swap_max">Maksimal 7 GB</string>
+    <string name="github_star">Menikmati AXION AI offline? Beri kami bintang di GitHub!</string>
+    <string name="romance_promo">Coba Produk Kami Yang Lain! ROMANCE ENGINE nyatakan cintamu dengan cara tak terlupakan. Gunakan sekarang, secara gratis.</string>
+    <string name="docs">Dokumentasi Perusahaan</string>
+    <string name="feedback">Feedback</string>
+    <string name="type_message">Ketik pesan…</string>
+    <string name="model_formats_hint">Format didukung: GGUF, ONNX, PT/PTH, SafeTensors, BIN (engine native menentukan format yang benar-benar bisa dijalankan)</string>
+</resources>
