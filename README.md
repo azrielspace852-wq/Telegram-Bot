@@ -61,6 +61,12 @@ Letakkan file `.gguf` di storage perangkat, lalu pilih dari halaman Model.
 - Pada perangkat non-root, true `swapon` tidak tersedia; file berfungsi sebagai disk-backed virtual memory.
 - Tombol buat / hapus di Settings.
 
+## Build requirements
+
+- Android Gradle Plugin 8.9.1 or newer.
+- Android API 36 must be available as the compile SDK.
+- Gradle 8.11.1 and JDK 17.
+
 ## Build
 
 ```bash

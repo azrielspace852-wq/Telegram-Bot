@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.offlineai.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.offlineai.app"
