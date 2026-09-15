@@ -16,19 +16,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.offlineai.app.R
 import com.offlineai.app.data.MessageRole
 import com.offlineai.app.ui.ChatViewModel
-import com.offlineai.app.ui.ChatUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(vm: ChatViewModel = viewModel()) {
+fun ChatScreen(vm: ChatViewModel) {
     val state by vm.uiState.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val context = LocalContext.current
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -36,14 +35,12 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         uri?.let { vm.addAttachment(it) }
     }
 
-    // Auto scroll
     LaunchedEffect(state.messages.size, state.isGenerating) {
         if (state.messages.isNotEmpty()) {
             listState.animateScrollToItem(state.messages.lastIndex)
         }
     }
 
-    // Warning dialog
     state.warning?.let { msg ->
         AlertDialog(
             onDismissRequest = { vm.clearWarning() },
@@ -53,41 +50,57 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 TextButton(onClick = {
                     state.currentModel?.let { vm.selectModel(it, force = true) }
                     vm.clearWarning()
-                }) { Text("Tetap Jalankan") }
+                }) { Text(stringResource(R.string.force_run)) }
             },
             dismissButton = {
-                TextButton(onClick = { vm.clearWarning() }) { Text("Batal") }
+                TextButton(onClick = { vm.clearWarning() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
 
-    Column(Modifier.fillMaxSize()) {
-        // Top bar
+    Column(
+        Modifier
+            .fillMaxSize()
+            .imePadding() // naikkan konten saat keyboard muncul
+            .navigationBarsPadding()
+    ) {
         TopAppBar(
             title = {
                 Column {
                     Text(
-                        state.currentModel?.name ?: "Belum ada model",
+                        state.currentModel?.name ?: stringResource(R.string.no_model),
                         style = MaterialTheme.typography.titleMedium
                     )
                     state.deviceStats?.let {
+                        val swapExtra = state.swapInfo?.takeIf { s -> s.exists }?.let { s ->
+                            " · Swap: ${s.sizeMb} MB"
+                        } ?: ""
                         Text(
-                            "RAM: ${it.availableRamMb}/${it.totalRamMb} MB · CPU: ${it.cpuCores} cores",
+                            "RAM: ${it.availableRamMb}/${it.totalRamMb} MB · CPU: ${it.cpuCores}$swapExtra",
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
             },
             actions = {
+                if (state.thinkingEnabled && state.currentModel?.supportsReasoning == true) {
+                    AssistChip(
+                        onClick = { },
+                        label = { Text("Think", style = MaterialTheme.typography.labelSmall) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Psychology, null, Modifier.size(16.dp))
+                        },
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
                 if (state.isGenerating) {
                     IconButton(onClick = { vm.stopGeneration() }) {
-                        Icon(Icons.Default.Stop, "Stop")
+                        Icon(Icons.Default.Stop, stringResource(R.string.stop))
                     }
                 }
             }
         )
 
-        // Messages
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -105,7 +118,6 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             }
         }
 
-        // Pending attachments
         if (state.pendingAttachments.isNotEmpty()) {
             Row(
                 Modifier
@@ -123,7 +135,6 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             }
         }
 
-        // Error
         state.error?.let {
             Text(
                 it,
@@ -132,7 +143,6 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             )
         }
 
-        // Input row
         Row(
             Modifier
                 .fillMaxWidth()
@@ -140,19 +150,21 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = {
-                filePicker.launch(arrayOf(
-                    "text/*", "application/pdf", "application/json",
-                    "application/zip", "image/*", "audio/*", "video/*",
-                    "application/octet-stream"
-                ))
+                filePicker.launch(
+                    arrayOf(
+                        "text/*", "application/pdf", "application/json",
+                        "application/zip", "image/*", "audio/*", "video/*",
+                        "application/octet-stream"
+                    )
+                )
             }) {
-                Icon(Icons.Default.AttachFile, "Lampirkan")
+                Icon(Icons.Default.AttachFile, stringResource(R.string.attach_file))
             }
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Ketik pesan...") },
+                placeholder = { Text(stringResource(R.string.type_message)) },
                 maxLines = 4
             )
             Spacer(Modifier.width(8.dp))
@@ -163,7 +175,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 },
                 enabled = !state.isGenerating && state.currentModel != null
             ) {
-                Icon(Icons.Default.Send, "Kirim")
+                Icon(Icons.Default.Send, stringResource(R.string.send))
             }
         }
     }
@@ -190,13 +202,13 @@ fun MessageBubble(
                 .padding(12.dp)
         ) {
             Text(
-                text = message.content.ifBlank { if (message.isStreaming) "..." else "" },
+                text = message.content.ifBlank { if (message.isStreaming) "…" else "" },
                 style = MaterialTheme.typography.bodyMedium
             )
             if (!isUser && message.content.isNotBlank() && !message.isStreaming) {
                 Row(Modifier.padding(top = 4.dp)) {
                     IconButton(onClick = onSpeak, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.VolumeUp, "Bacakan", Modifier.size(18.dp))
+                        Icon(Icons.Default.VolumeUp, stringResource(R.string.tts), Modifier.size(18.dp))
                     }
                 }
             }

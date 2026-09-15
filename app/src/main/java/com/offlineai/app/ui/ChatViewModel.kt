@@ -5,22 +5,27 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.offlineai.app.data.AppPreferences
 import com.offlineai.app.data.Attachment
 import com.offlineai.app.data.ChatMessage
 import com.offlineai.app.data.MessageRole
 import com.offlineai.app.data.ModelInfo
+import com.offlineai.app.data.ThemeMode
 import com.offlineai.app.inference.InferenceEngine
 import com.offlineai.app.inference.StubInferenceEngine
 import com.offlineai.app.server.LocalAIServerService
 import com.offlineai.app.util.FileUtils
 import com.offlineai.app.util.HardwareInfo
+import com.offlineai.app.util.SwapManager
 import com.offlineai.app.util.TtsHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 enum class ComputeBackend { AUTO, CPU, GPU }
 
@@ -35,13 +40,18 @@ data class ChatUiState(
     val backend: ComputeBackend = ComputeBackend.AUTO,
     val serverRunning: Boolean = false,
     val serverPort: Int = 8080,
-    val deviceStats: HardwareInfo.DeviceStats? = null
+    val deviceStats: HardwareInfo.DeviceStats? = null,
+    val thinkingEnabled: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val swapInfo: SwapManager.SwapInfo? = null,
+    val isCreatingSwap: Boolean = false
 )
 
 class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val engine: InferenceEngine = StubInferenceEngine() // TODO: replace with real engine
+    private val engine: InferenceEngine = StubInferenceEngine()
     private val tts = TtsHelper(app)
+    private val prefs = AppPreferences(app)
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -50,7 +60,43 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         refreshHardware()
+        refreshSwap()
         LocalAIServerService.engine = engine
+        // Restore persisted model + settings
+        viewModelScope.launch {
+            val path = prefs.selectedModelPath.first()
+            val name = prefs.selectedModelName.first()
+            val size = prefs.selectedModelSize.first()
+            val thinking = prefs.thinkingEnabled.first()
+            val backendStr = prefs.backend.first()
+            val theme = prefs.themeMode.first()
+
+            _uiState.update {
+                it.copy(
+                    thinkingEnabled = thinking,
+                    themeMode = theme,
+                    backend = when (backendStr) {
+                        "CPU" -> ComputeBackend.CPU
+                        "GPU" -> ComputeBackend.GPU
+                        else -> ComputeBackend.AUTO
+                    }
+                )
+            }
+
+            if (path != null && File(path).exists()) {
+                val info = ModelInfo(
+                    path = path,
+                    name = name ?: File(path).name,
+                    sizeBytes = size ?: File(path).length()
+                )
+                // Auto-enable thinking if model supports it
+                if (info.supportsReasoning && !thinking) {
+                    prefs.setThinkingEnabled(true)
+                    _uiState.update { it.copy(thinkingEnabled = true) }
+                }
+                selectModel(info, force = true, persist = false)
+            }
+        }
     }
 
     fun refreshHardware() {
@@ -58,10 +104,22 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(deviceStats = stats) }
     }
 
-    fun selectModel(model: ModelInfo, force: Boolean = false) {
+    fun refreshSwap() {
+        val info = SwapManager.getInfo(getApplication())
+        _uiState.update { it.copy(swapInfo = info) }
+    }
+
+    fun selectModel(model: ModelInfo, force: Boolean = false, persist: Boolean = true) {
         viewModelScope.launch {
             val stats = _uiState.value.deviceStats ?: HardwareInfo.getStats(getApplication())
-            val (ok, msg) = HardwareInfo.canLoadModel(stats, model.sizeMb, force)
+            val swap = _uiState.value.swapInfo ?: SwapManager.getInfo(getApplication())
+            // Consider swap as additional "memory" for estimation when present
+            val effectiveRam = stats.availableRamMb + if (swap.exists) swap.sizeMb else 0L
+            val (ok, msg) = HardwareInfo.canLoadModel(
+                stats.copy(availableRamMb = effectiveRam),
+                model.sizeMb,
+                force
+            )
             if (!ok) {
                 _uiState.update { it.copy(warning = msg) }
                 return@launch
@@ -78,12 +136,21 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 nGpuLayers = nGpu
             )
             if (result.isSuccess) {
+                // Auto thinking if supported
+                val enableThinking = model.supportsReasoning
+                if (enableThinking) {
+                    prefs.setThinkingEnabled(true)
+                }
                 _uiState.update {
                     it.copy(
                         currentModel = model,
                         isModelLoading = false,
-                        messages = emptyList() // reset chat on new model
+                        thinkingEnabled = enableThinking || it.thinkingEnabled && model.supportsReasoning,
+                        messages = emptyList()
                     )
+                }
+                if (persist) {
+                    prefs.setSelectedModel(model.path, model.name, model.sizeBytes)
                 }
             } else {
                 _uiState.update {
@@ -102,8 +169,53 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setBackend(backend: ComputeBackend) {
         _uiState.update { it.copy(backend = backend) }
-        // reload model if already loaded
+        viewModelScope.launch { prefs.setBackend(backend.name) }
         _uiState.value.currentModel?.let { selectModel(it, force = true) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            prefs.setThemeMode(mode)
+            _uiState.update { it.copy(themeMode = mode) }
+        }
+    }
+
+    fun setThinkingEnabled(enabled: Boolean) {
+        val model = _uiState.value.currentModel
+        if (enabled && model != null && !model.supportsReasoning) {
+            _uiState.update { it.copy(error = "Model ini tidak mendukung mode thinking/reasoning") }
+            return
+        }
+        viewModelScope.launch {
+            prefs.setThinkingEnabled(enabled)
+            _uiState.update { it.copy(thinkingEnabled = enabled, error = null) }
+        }
+    }
+
+    fun createSwap(sizeMb: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingSwap = true, error = null) }
+            val result = SwapManager.createSwap(getApplication(), sizeMb)
+            if (result.isSuccess) {
+                prefs.setSwap(result.getOrNull(), sizeMb.coerceAtMost(SwapManager.MAX_SWAP_MB))
+                refreshSwap()
+                refreshHardware()
+            } else {
+                _uiState.update {
+                    it.copy(error = result.exceptionOrNull()?.message ?: "Gagal membuat swap")
+                }
+            }
+            _uiState.update { it.copy(isCreatingSwap = false) }
+        }
+    }
+
+    fun deleteSwap() {
+        viewModelScope.launch {
+            SwapManager.deleteSwap(getApplication())
+            prefs.setSwap(null, 0)
+            refreshSwap()
+            refreshHardware()
+        }
     }
 
     fun addAttachment(uri: Uri) {
@@ -127,7 +239,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         val atts = _uiState.value.pendingAttachments
+        val thinkingPrefix = if (_uiState.value.thinkingEnabled) {
+            "[Thinking mode aktif – model akan menampilkan penalaran jika didukung]\n\n"
+        } else ""
         val fullContent = buildString {
+            append(thinkingPrefix)
             append(text)
             atts.forEach { a ->
                 append("\n\n[File: ${a.name}]")
@@ -219,7 +335,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** AI can request ZIP generation – helper for tool-like behaviour */
     fun generateZipFromText(files: Map<String, String>): java.io.File {
         return FileUtils.createZip(getApplication(), files)
     }

@@ -12,25 +12,28 @@ android {
 
     defaultConfig {
         applicationId = "com.offlineai.app"
-        minSdk = 29          // Android 10
+        minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
+    }
 
-        // Placeholder for llama.cpp / native flags
-        externalNativeBuild {
-            cmake {
-                cppFlags += listOf("-O3", "-fvisibility=hidden", "-ffunction-sections", "-fdata-sections")
-                arguments += listOf(
-                    "-DANDROID_STL=c++_shared",
-                    "-DCMAKE_BUILD_TYPE=Release"
-                )
+    // Optional release signing: if debug.keystore exists, use it so APK is installable.
+    // On CI without keystore, release remains unsigned (user can still install debug APK).
+    signingConfigs {
+        val debugKs = file(System.getProperty("user.home") + "/.android/debug.keystore")
+        if (debugKs.exists()) {
+            create("release") {
+                storeFile = debugKs
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
             }
         }
     }
@@ -43,6 +46,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false
@@ -72,14 +78,6 @@ android {
             useLegacyPackaging = true
         }
     }
-
-    // Uncomment + configure when you add real llama.cpp CMake
-    // externalNativeBuild {
-    //     cmake {
-    //         path = file("src/main/cpp/CMakeLists.txt")
-    //         version = "3.22.1"
-    //     }
-    // }
 }
 
 dependencies {
@@ -99,20 +97,15 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // File picking & document
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
 
-    // PDF text extraction (lightweight)
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
-    // ZIP handling (Java built-in is enough, but Apache Commons for robustness)
     implementation("org.apache.commons:commons-compress:1.27.1")
 
-    // Ktor for local OpenAI-compatible server
     implementation("io.ktor:ktor-server-core:2.3.12")
     implementation("io.ktor:ktor-server-cio:2.3.12")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
@@ -120,13 +113,10 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:2.3.12")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // DataStore for settings
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // Accompanist permissions
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
 
-    // Image loading (for attached images)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

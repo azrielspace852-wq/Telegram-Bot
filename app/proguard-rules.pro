@@ -4,12 +4,20 @@
     native <methods>;
 }
 
+# Keep all app model / data classes
+-keep class com.offlineai.app.data.** { *; }
+-keep class com.offlineai.app.ui.** { *; }
+-keep class com.offlineai.app.util.** { *; }
+-keep class com.offlineai.app.server.** { *; }
+
 # Ktor
 -dontwarn io.ktor.**
 -keep class io.ktor.** { *; }
+-keep class io.ktor.server.** { *; }
+-keep class io.ktor.utils.io.** { *; }
 
 # Kotlin Serialization
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature
 -dontnote kotlinx.serialization.AnnotationsKt
 -keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
 -keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
@@ -21,7 +29,7 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# PDFBox-Android (optional native / logging deps not present on Android)
+# PDFBox-Android
 -dontwarn com.gemalto.jp2.**
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn org.slf4j.**
@@ -34,3 +42,14 @@
 
 # Coil
 -dontwarn coil.**
+
+# DataStore
+-keep class androidx.datastore.** { *; }
+
+# Compose / Material – avoid R8 stripping
+-keep class androidx.compose.** { *; }
+-dontwarn androidx.compose.**
+
+# General Android
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

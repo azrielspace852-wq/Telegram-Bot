@@ -15,7 +15,7 @@ class OfflineAIApp : Application() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serverChannel = NotificationChannel(
                 "local_ai_server",
-                "Local AI Server",
+                "AXION AI Server",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Notifikasi saat device menjadi server AI lokal"

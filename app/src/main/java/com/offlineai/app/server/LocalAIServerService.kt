@@ -74,7 +74,7 @@ class LocalAIServerService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, "local_ai_server")
-            .setContentTitle("Offline AI Server")
+            .setContentTitle("AXION AI Server")
             .setContentText("Berjalan di port $port (OpenAI-compatible)")
             .setSmallIcon(android.R.drawable.ic_menu_share)
             .setContentIntent(pi)
@@ -92,7 +92,7 @@ class LocalAIServerService : Service() {
             }
             routing {
                 get("/") {
-                    call.respondText("Offline AI Local Server – OpenAI compatible\n/v1/models\n/v1/chat/completions")
+                    call.respondText("AXION AI Local Server – OpenAI compatible\n/v1/models\n/v1/chat/completions")
                 }
                 get("/v1/models") {
                     val modelId = engine?.modelPath?.substringAfterLast('/') ?: "none"
