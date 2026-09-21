@@ -77,7 +77,7 @@ export class GeminiClient {
     contextParts.push({ text: userText });
     contents.push({ role: "user", parts: contextParts });
 
-    const data = await this.generate(this.env.GEMINI_MODEL || "gemini-3.5-flash", {
+    const data = await this.generate(this.env.GEMINI_MODEL || "gemini-2.5-flash", {
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents,
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
@@ -91,7 +91,7 @@ export class GeminiClient {
     const previous = existing?.summary ? `Existing long-term memory:\n${existing.summary}\n\n` : "";
     const transcript = messages.map((m) => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
     const prompt = `${previous}Update the long-term memory for this user. Keep only durable facts, preferences, project context, recurring goals, and stable constraints. Do not store secrets. Remove stale or contradicted details. Produce one compact paragraph plus short semicolon-separated facts.\n\nMessages to absorb:\n${transcript}`;
-    const data = await this.generate(this.env.GEMINI_MODEL || "gemini-3.5-flash", {
+    const data = await this.generate(this.env.GEMINI_MODEL || "gemini-2.5-flash", {
       systemInstruction: { parts: [{ text: "You maintain long-term user memory. Never store passwords, API keys, access tokens, payment secrets, or highly sensitive personal data." }] },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 1200 }
