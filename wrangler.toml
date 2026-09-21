@@ -1,0 +1,28 @@
+name = "telegram-bot"
+main = "src/index.ts"
+compatibility_date = "2026-09-21"
+
+[observability]
+enabled = true
+
+[vars]
+GITHUB_OWNER = "azrielspace852-wq"
+GITHUB_REPO = "Database-001"
+GITHUB_BRANCH = "main"
+GITHUB_COMMITTER_NAME = "Neuralis Telegram Bot"
+GITHUB_COMMITTER_EMAIL = "azrielspace852-wq@users.noreply.github.com"
+GEMINI_MODEL = "gemini-3.5-flash"
+GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
+MAX_FILE_BYTES = "8388608"
+RATE_LIMIT_REQUESTS = "10"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+
+[durable_objects]
+bindings = [
+  { name = "RATE_LIMITER", class_name = "RateLimiter" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimiter"]
+
