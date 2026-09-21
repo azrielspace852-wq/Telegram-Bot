@@ -14,6 +14,12 @@ export interface Env {
   RATE_LIMIT_REQUESTS: string;
   RATE_LIMIT_WINDOW_SECONDS: string;
   RATE_LIMITER: DurableObjectNamespace;
+  INCOMING_QUEUE: Queue<TelegramQueueEnvelope>;
+}
+
+export interface TelegramQueueEnvelope {
+  update_id: number;
+  update: TelegramUpdate;
 }
 
 export interface TelegramUpdate {
@@ -65,8 +71,8 @@ export interface UserMemoryRecord {
   preferredLanguage: "id" | "en";
   updatedAt: string;
   lastProcessedUpdateId?: number;
+  processedUpdateIds?: number[];
 }
-
 
 export interface SummaryRecord {
   version: 1;

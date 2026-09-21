@@ -8,7 +8,15 @@ export const summaryPath = (userId: string) => `memories/summary_${safeId(userId
 export const conversationPath = (conversationId: string) => `Conversation/${safeId(conversationId)}.json`;
 
 export function emptyUserMemory(userId: string): UserMemoryRecord {
-  return { version: 1, userId, activeConversationId: null, conversationIds: [], preferredLanguage: "id", updatedAt: nowIso() };
+  return {
+    version: 1,
+    userId,
+    activeConversationId: null,
+    conversationIds: [],
+    preferredLanguage: "id",
+    updatedAt: nowIso(),
+    processedUpdateIds: []
+  };
 }
 
 export async function getUserMemory(repo: GitHubRepo, userId: string): Promise<UserMemoryRecord> {

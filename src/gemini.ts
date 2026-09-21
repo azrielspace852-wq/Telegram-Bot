@@ -146,7 +146,7 @@ export class GeminiClient {
   }
 
   private async generateImage(ext: string, prompt: string): Promise<GenerateResult> {
-    const data = await this.generate(this.env.GEMINI_IMAGE_MODEL || "gemini-3.5-flash-image", {
+    const data = await this.generate(this.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseModalities: ["Image"] }
     });

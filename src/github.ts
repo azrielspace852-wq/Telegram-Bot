@@ -89,9 +89,20 @@ export class GitHubRepo {
 
       // Large-content fallback: request the Git blob in raw form.
       const blobUrl = `${this.base}/repos/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/git/blobs/${encodeURIComponent(meta.sha)}`;
-      const response = await fetch(blobUrl, {
-        headers: this.headers({ Accept: "application/vnd.github.raw+json" })
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      let response: Response;
+      try {
+        response = await fetch(blobUrl, {
+          headers: this.headers({ Accept: "application/vnd.github.raw+json" }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") throw new GitHubError("GitHub blob read timed out", 504);
+        throw new GitHubError("GitHub blob read failed", 502, String(error));
+      } finally {
+        clearTimeout(timer);
+      }
       if (!response.ok) throw new GitHubError(`GitHub blob read failed (${response.status})`, response.status, await response.text());
       return new Uint8Array(await response.arrayBuffer());
     } catch (error) {

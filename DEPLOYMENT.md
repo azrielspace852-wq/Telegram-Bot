@@ -20,7 +20,21 @@ Create a fine-grained GitHub Personal Access Token scoped only to the `azrielspa
 
 Do not commit the token into the repository.
 
-## 3. Create Worker secrets
+## 3. Create the Cloudflare Queue
+
+This version intentionally uses Cloudflare Queues so Telegram webhook requests can return immediately while Gemini/GitHub processing continues in a Queue consumer.
+
+Create the queue once:
+
+```bash
+npx wrangler queues create telegram-bot-incoming
+```
+
+The configured dead-letter queue `telegram-bot-dead-letter` is created automatically when the consumer configuration is deployed.
+
+The consumer is intentionally configured with `max_batch_size = 1` and `max_concurrency = 1`. This keeps Telegram updates serialized so GitHub-backed conversation state cannot be modified concurrently by multiple queue consumers.
+
+## 4. Create Worker secrets
 
 From the project directory:
 
@@ -32,10 +46,6 @@ npx wrangler secret put GEMINI_API_KEY
 ```
 
 For local development, copy `.dev.vars.example` to `.dev.vars` and fill in values.
-
-## 4. Configure `wrangler.toml`
-
-The repository name and owner are already set. Change only the Worker name or variables when needed. `RATE_LIMITER` uses a new SQLite-backed Durable Object migration.
 
 ## 5. Deploy
 
@@ -71,9 +81,27 @@ $env:TELEGRAM_WEBHOOK_SECRET='your-secret'
 node scripts/set-webhook.mjs
 ```
 
-The webhook endpoint is `/webhook` and validates `X-Telegram-Bot-Api-Secret-Token` when `TELEGRAM_WEBHOOK_SECRET` is configured.
+The webhook endpoint is `/webhook`. The script subscribes only to `message` updates and configures a small webhook connection count because actual processing is handled asynchronously by the Queue.
 
-## 7. Smoke test
+## 7. Verify webhook health
+
+Run:
+
+```bash
+export TELEGRAM_BOT_TOKEN='...'
+node scripts/check-webhook.mjs
+```
+
+Inspect these fields in the returned JSON when diagnosing delivery problems:
+
+- `url`
+- `pending_update_count`
+- `last_error_date`
+- `last_error_message`
+- `max_connections`
+- `allowed_updates`
+
+## 8. Smoke test
 
 Open the bot and send:
 
@@ -99,7 +127,7 @@ Jelaskan isi file ini.
 /send nama_file.ext
 ```
 
-## 8. Local worker
+## 9. Local worker
 
 ```bash
 cp .dev.vars.example .dev.vars
@@ -107,4 +135,4 @@ cp .dev.vars.example .dev.vars
 npm run dev
 ```
 
-Use a public tunnel if Telegram webhook callbacks must reach a local Worker. Alternatively deploy a staging Worker and point the webhook at the staging URL.
+The local Worker should also have a Queue binding available in the local Wrangler runtime. Use a public tunnel if Telegram webhook callbacks must reach the local Worker.

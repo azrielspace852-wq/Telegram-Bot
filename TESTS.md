@@ -8,46 +8,58 @@
 
 A request to `POST /webhook` without the configured Telegram secret must return HTTP 403. A matching secret must reach the update parser.
 
-## C. Normal conversation
+## C. Webhook queue handoff
+
+A valid `message` update must return HTTP 2xx without waiting for Gemini or GitHub. The update must be written to `telegram-bot-incoming` with the same `update_id`.
+
+## D. Queue consumer
+
+The Queue consumer must process the queued update, send the Telegram response, and acknowledge the queue message. Processing failures that prevent the task from completing must use Queue retry handling.
+
+## E. Normal conversation
 
 Send two normal messages without slash commands. The first should create `memories/user_<id>.json` and `Conversation/<id>.json`; the second should append both user/model turns to the same conversation.
 
-## D. New conversation
+## F. New conversation
 
 Run `/new My Test`. Verify that a new conversation JSON file is created and becomes `activeConversationId`.
 
-## E. Conversation selection
+## G. Conversation selection
 
 Run `/conversations`, copy an ID, then `/select <id>`. Verify `activeConversationId` changes.
 
-## F. File ingestion
+## H. File ingestion
 
 Upload a supported document or media file. Verify it appears under `Sent/<conversation_id>/` and `/files` lists it.
 
-## G. File discussion
+## I. File discussion
 
 Run `/discuss <name>`, then send a normal question. Verify Gemini receives the selected file as context when it is within the configured multimodal safety limit.
 
-## H. ZIP extraction
+## J. ZIP extraction
 
 Upload a small ZIP, run `/discuss <zip-name>`, and verify the bot reports archive entries without allowing path traversal.
 
-## I. AI file generation
+## K. AI file generation
 
 Test `/generate txt ...`, `/generate json ...`, `/generate pdf ...`, `/generate pptx ...`, `/generate zip ...`, and `/generate png ...`.
 
-## J. Unsupported AI binary generation
+## L. Unsupported AI binary generation
 
 Test `/generate apk ...` and `/generate mp4 ...`. The bot should return a user-friendly unsupported-generation message rather than creating a fake binary.
 
-## K. Duplicate update
+## M. Duplicate update / retry
 
-Replay the same Telegram `update_id`. The bot should not append a duplicate message or create a second stored upload for the same update.
+Replay the same Telegram `update_id`. The bot should not run Gemini twice for the same update. If the model response was already stored but Telegram delivery failed, the retry should resend the stored response instead of generating a second response.
 
-## L. Rate limit
+## N. Rate limit
 
 Send more than `RATE_LIMIT_REQUESTS` updates inside the configured window. The bot should send a rate-limit message and reject processing until the window resets.
 
-## M. Error handling
+## O. Error handling
 
 Temporarily use an invalid GitHub token or Gemini API key in staging. The bot should return a user-facing error while logs contain no secret value.
+
+## P. Webhook diagnostics
+
+Run `node scripts/check-webhook.mjs` and verify that `url` points to the deployed `/webhook`, `allowed_updates` contains `message`, and `pending_update_count` does not remain continuously elevated.

@@ -39,6 +39,10 @@ export class TelegramClient {
     }
   }
 
+  async sendChatAction(chatId: number, action: "typing" = "typing"): Promise<void> {
+    await this.api("sendChatAction", { chat_id: chatId, action });
+  }
+
   async sendMessage(chatId: number, text: string): Promise<void> {
     for (const part of chunkText(text)) {
       await this.api("sendMessage", { chat_id: chatId, text: part, disable_web_page_preview: true });

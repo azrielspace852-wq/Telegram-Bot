@@ -26,3 +26,14 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
+[[queues.producers]]
+binding = "INCOMING_QUEUE"
+queue = "telegram-bot-incoming"
+
+[[queues.consumers]]
+queue = "telegram-bot-incoming"
+max_batch_size = 1
+max_batch_timeout = 1
+max_retries = 5
+dead_letter_queue = "telegram-bot-dead-letter"
+max_concurrency = 1

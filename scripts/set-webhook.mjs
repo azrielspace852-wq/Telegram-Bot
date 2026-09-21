@@ -5,12 +5,20 @@ if (!token || !webhookUrl) {
   console.error("Set TELEGRAM_BOT_TOKEN and WEBHOOK_URL first.");
   process.exit(1);
 }
-const body = { url: `${webhookUrl.replace(/\/$/, "")}/webhook` };
+
+const body = {
+  url: `${webhookUrl.replace(/\/$/, "")}/webhook`,
+  allowed_updates: ["message"],
+  max_connections: 10
+};
 if (secret) body.secret_token = secret;
+
 const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify(body)
 });
-console.log(await response.text());
+
+const output = await response.text();
+console.log(output);
 if (!response.ok) process.exit(1);
